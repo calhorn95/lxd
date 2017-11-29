@@ -32,6 +32,13 @@ A number of new syscalls related container configuration keys were introduced.
 
 See [configuration.md](Configuration) for how to use them.
 
+## restrict\_devlxd
+A new security related container configuration key was introduced. 
+
+ * `security.devlxd`
+
+See [configuration.md](Configuration) for how to use them.
+
 ## auth\_pki
 This indicates support for PKI authentication mode.
 

@@ -1054,11 +1054,13 @@ func (c *containerLXC) initLXC(config bool) error {
 	}
 
 	// Setup devlxd
-	err = lxcSetConfigItem(cc, "lxc.mount.entry", fmt.Sprintf("%s dev/lxd none bind,create=dir 0 0", shared.VarPath("devlxd")))
-	if err != nil {
-		return err
-	}
-
+	if c.IsDevLxd() {
+		err = lxcSetConfigItem(cc, "lxc.mount.entry", fmt.Sprintf("%s dev/lxd none bind,create=dir 0 0", shared.VarPath("devlxd")))
+		if err != nil {
+			return err
+		}
+	} 
+	
 	// Setup AppArmor
 	if c.state.OS.AppArmorAvailable {
 		if c.state.OS.AppArmorConfined || !c.state.OS.AppArmorAdmin {
@@ -7115,7 +7117,7 @@ func (c *containerLXC) IsEphemeral() bool {
 }
 
 func (c *containerLXC) IsFrozen() bool {
-	return c.State() == "FROZEN"
+	return c.State() == "FROZEN"	
 }
 
 func (c *containerLXC) IsNesting() bool {
@@ -7124,6 +7126,14 @@ func (c *containerLXC) IsNesting() bool {
 
 func (c *containerLXC) IsPrivileged() bool {
 	return shared.IsTrue(c.expandedConfig["security.privileged"])
+}
+
+func (c *containerLXC) IsDevLxd() bool {
+	if (c.expandedConfig["security.devlxd"] == "") {
+		return true
+	} else {
+		return shared.IsTrue(c.expandedConfig["security.devlxd"])
+	}
 }
 
 func (c *containerLXC) IsRunning() bool {
