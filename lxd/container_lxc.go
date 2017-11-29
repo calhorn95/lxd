@@ -7117,7 +7117,7 @@ func (c *containerLXC) IsEphemeral() bool {
 }
 
 func (c *containerLXC) IsFrozen() bool {
-	return c.State() == "FROZEN"	
+	return c.State() == "FROZEN"
 }
 
 func (c *containerLXC) IsNesting() bool {
