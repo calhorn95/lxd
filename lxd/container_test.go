@@ -190,6 +190,33 @@ func (suite *containerTestSuite) TestContainer_LogPath() {
 	suite.Req.Equal(shared.VarPath("logs", "testFoo"), c.LogPath())
 }
 
+func (suite *containerTestSuite) TestContainer_Devlxd_Exists() {
+	args := db.ContainerArgs{
+		Ctype:     db.CTypeRegular,
+		Ephemeral: false,
+		Config:    map[string]string{"security.devlxd": "true"},
+		Name:      "testFoo",
+	}
+
+	c, err := containerCreateInternal(suite.d.State(), args)
+	suite.Req.Nil(err)
+	suite.Req.True(c.IsDevLxd_Enabled(), "This container should have /dev/lxd enabled.")
+	suite.Req.Nil(c.Delete(), "Failed to delete the container.")
+}
+
+func (suite *containerTestSuite) TestContainer_Devlxd_Not_Exists() {
+	args := db.ContainerArgs{
+		Ctype:     db.CTypeRegular,
+		Ephemeral: false,
+		Config:    map[string]string{"security.devlxd": "false"},
+		Name:      "testFoo",
+	}
+	c, err := containerCreateInternal(suite.d.State(), args)
+	suite.Req.Nil(err)
+	suite.Req.False(c.IsDevLxd_Enabled(), "This container should have /dev/lxd disabled.")
+	suite.Req.Nil(c.Delete(), "Failed to delete the container.")
+}
+
 func (suite *containerTestSuite) TestContainer_IsPrivileged_Privileged() {
 	args := db.ContainerArgs{
 		Ctype:     db.CTypeRegular,

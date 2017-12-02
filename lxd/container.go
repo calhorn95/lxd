@@ -469,6 +469,7 @@ type container interface {
 	IsSnapshot() bool
 	IsStateful() bool
 	IsNesting() bool
+	IsDevLxd_Enabled() bool
 
 	// Hooks
 	OnStart() error
