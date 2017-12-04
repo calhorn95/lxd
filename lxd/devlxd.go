@@ -52,6 +52,128 @@ type devLxdHandler struct {
 	f func(c container, r *http.Request) *devLxdResponse
 }
 
+var eventsLock sync.Mutex
+var eventListeners map[string]*eventListener = make(map[string]*eventListener)
+
+type eventListener struct {
+	connection   *websocket.Conn
+	messageTypes []string
+	active       chan bool
+	id           string
+	lock         sync.Mutex
+	done         bool
+}
+
+func eventSendConfig(eventType string, config map[string]string) error {
+	event := shared.Jmap{}
+	event["type"] = eventType
+	event["timestamp"] = time.Now()
+	event["key"] = config["key"]
+	event["value"] = config["value"]
+	body, err := json.Marshal(event)
+	if err != nil {
+		return err
+	}
+
+	eventsLock.Lock()
+	listeners := eventListeners
+	for _, listener := range listeners {
+		if !shared.StringInSlice(eventType, listener.messageTypes) {
+			continue
+		}
+
+		go func(listener *eventListener, body []byte) {
+			// Check that the listener still exists
+			if listener == nil {
+				return
+			}
+
+			// Ensure there is only a single even going out at the time
+			listener.lock.Lock()
+			defer listener.lock.Unlock()
+
+			// Make sure we're not done already
+			if listener.done {
+				return
+			}
+
+			err = listener.connection.WriteMessage(websocket.TextMessage, body)
+			if err != nil {
+				// Remove the listener from the list
+				eventsLock.Lock()
+				delete(eventListeners, listener.id)
+				eventsLock.Unlock()
+
+				// Disconnect the listener
+				listener.connection.Close()
+				listener.active <- false
+				listener.done = true
+				logger.Debugf("Disconnected events listener: %s", listener.id)
+			}
+		}(listener, body)
+	}
+	eventsLock.Unlock()
+
+	return nil
+}
+
+
+func eventSendDevice(eventType string, config map[string]string) error {
+	event := shared.Jmap{}
+	event["type"] = eventType
+	event["timestamp"] = time.Now()
+	event["action"] = config["action"]
+	event["device_type"] = config["type"]
+	event["device_name"] = config["name"]
+	body, err := json.Marshal(event)
+	if err != nil {
+		return err
+	}
+
+	eventsLock.Lock()
+	listeners := eventListeners
+	for _, listener := range listeners {
+		if !shared.StringInSlice(eventType, listener.messageTypes) {
+			continue
+		}
+
+		go func(listener *eventListener, body []byte) {
+			// Check that the listener still exists
+			if listener == nil {
+				return
+			}
+
+			// Ensure there is only a single even going out at the time
+			listener.lock.Lock()
+			defer listener.lock.Unlock()
+
+			// Make sure we're not done already
+			if listener.done {
+				return
+			}
+
+			err = listener.connection.WriteMessage(websocket.TextMessage, body)
+			if err != nil {
+				// Remove the listener from the list
+				eventsLock.Lock()
+				delete(eventListeners, listener.id)
+				eventsLock.Unlock()
+
+				// Disconnect the listener
+				listener.connection.Close()
+				listener.active <- false
+				listener.done = true
+				logger.Debugf("Disconnected events listener: %s", listener.id)
+			}
+		}(listener, body)
+	}
+	eventsLock.Unlock()
+
+	return nil
+}
+
+var devlxdEvents = // going to be the 
+
 var configGet = devLxdHandler{"/1.0/config", func(c container, r *http.Request) *devLxdResponse {
 	filtered := []string{}
 	for k := range c.ExpandedConfig() {
@@ -91,6 +213,7 @@ var handlers = []devLxdHandler{
 	configGet,
 	configKeyGet,
 	metadataGet,
+	devlxdEvents,
 	/* TODO: events */
 }
 
